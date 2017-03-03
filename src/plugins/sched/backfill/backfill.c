@@ -1284,11 +1284,24 @@ next_task:
 		/* Determine minimum and maximum node counts */
 		min_nodes = MAX(job_ptr->details->min_nodes,
 				part_ptr->min_nodes);
+		/* check whether job is allowed to override the partition limit */
+		qos_ptr = (slurmdb_qos_rec_t *)job_ptr->qos_ptr;
+		if ( qos_ptr && ( (qos_ptr->flags & QOS_FLAG_PART_MIN_NODE) ||
+                                  (qos_ptr->flags & QOS_FLAG_OVER_PART_QOS)
+				  ))
+		        min_nodes = job_ptr->details->min_nodes;
+
 		if (job_ptr->details->max_nodes == 0)
 			max_nodes = part_ptr->max_nodes;
-		else
-			max_nodes = MIN(job_ptr->details->max_nodes,
+		else {
+		        max_nodes = MIN(job_ptr->details->max_nodes,
 					part_ptr->max_nodes);
+			/* check whether job is allowed to override the partition limits */
+			if (qos_ptr && ( (qos_ptr->flags & QOS_FLAG_PART_MAX_NODE) ||
+                                         (qos_ptr->flags & QOS_FLAG_OVER_PART_QOS)
+                                         ))
+			        max_nodes = job_ptr->details->max_nodes;
+		}
 		max_nodes = MIN(max_nodes, 500000);     /* prevent overflows */
 		if (job_ptr->details->max_nodes)
 			req_nodes = max_nodes;
